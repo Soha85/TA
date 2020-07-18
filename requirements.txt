@@ -5,4 +5,4 @@ numpy==1.18.5
 pandas==1.0.4
 requests==2.23.0
 spacy==2.1.9
-spacy download en-core-web-lg==2.1.0
+python -m spacy download en-core-web-lg==2.1.0
