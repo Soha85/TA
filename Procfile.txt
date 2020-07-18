@@ -1,1 +1,1 @@
-web: Kemrapidapi app:app
+web: KEM app:app
