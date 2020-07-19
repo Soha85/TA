@@ -31,11 +31,12 @@ class KEM(Resource):
                 'wrd-punc':self.__std_GetWrdInfo(),
                 'stp':self.__std_GetStopInfo(),
                 'sent':self.__std_GetSentInfo(),
-                'longsent':self.__std_GetLongSentInfo(),
-                'freq':self.__frequent_matched_unmatched(),
-                'unique':self.__uique_matched_unmatched(),
-                'pos':self.__special_pos_matched_unmatched(),
-                'yule':self.__Yule1Measure()}
+                'longsent':self.__std_GetLongSentInfo()
+                #'freq':self.__frequent_matched_unmatched(),
+                #'unique':self.__uique_matched_unmatched(),
+                #'pos':self.__special_pos_matched_unmatched(),
+                #'yule':self.__Yule1Measure()
+               }
 
     def __std_GetTagInfo(self):
         return dict(Counter(([token.pos_ for token in self.__std_doc])))
