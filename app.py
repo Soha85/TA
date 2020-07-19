@@ -10,7 +10,15 @@ warnings.filterwarnings("ignore")
 
 app = Flask(__name__)
 api = Api(app)
+@app.route('/')
+def index():
+    return "hello to text analysis api"
 
+@app.route('/ta',methods=["GET"])
+def ta():
+    k=KEM()
+    return k.get()
+    
 class KEM(Resource):
     
 
@@ -184,8 +192,7 @@ class KEM(Resource):
         except ZeroDivisionError:
             return float(0)
 
-api.add_resource(KEM, "/ta", "/ta/")
+
      
-if __name__=="__main__":
-    
+if __name__=="__main__":    
     app.run(debug=True)
