@@ -19,7 +19,7 @@ class KEM(Resource):
         parser.add_argument("std_txt")
         parser.add_argument("gld_txt")
         params = parser.parse_args()
-        self.__nlp = spacy.load("en_core_web_lg")
+        self.__nlp = spacy.load("en_core_web_sm")
         #load ideal text
         self.__Golden_txt=request.args.get("gld_txt")
         self.__gld_doc=self.__nlp(self.__Golden_txt)
