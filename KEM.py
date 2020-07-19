@@ -5,7 +5,6 @@ from nltk.stem import PorterStemmer
 from itertools import groupby
 import spacy
 from collections import Counter
-import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -63,38 +62,7 @@ class KEM(Resource):
                     i=i+1
             lst.append(i)
         return {'Long Sentences number':sum(1 for obj in lst if obj>9)}
-    
-    def __student_data(self):
-        verbs,nouns,punct,stpwrd,oov,wrd,adj=0,0,0,0,0,0,0
-        text,lemma,POS,tag,Dep,IsStop,IsPunct=[],[],[],[],[],[],[]
-        verb_tenses=[]
-        for tkn in self.__std_doc:
-            if(not(tkn.is_punct)):
-                wrd=wrd+1
-            if(tkn.pos_=="VERB"):
-                verbs=verbs+1
-                verb_tenses.append([tkn.text,self.__nlp.vocab.morphology.tag_map[tkn.tag_]])
-            if(tkn.pos_=="NOUN"):
-                nouns=nouns+1
-            if(tkn.pos_=="ADJ"):
-                adj=adj+1
-            if(tkn.is_punct):
-                punct=punct+1
-            if(tkn.is_stop):
-                stpwrd=stpwrd+1
-            if(tkn.is_oov):
-                oov=oov+1
-            text.append(tkn.text)
-            lemma.append(tkn.lemma_)
-            POS.append(tkn.pos_)
-            tag.append(tkn.tag_)
-            Dep.append(tkn.dep_)
-            IsStop.append(tkn.is_stop)
-            IsPunct.append(tkn.is_punct)
-            
-        df=pd.DataFrame({'text':text,'lemma':lemma,'POS':POS,'tag':tag,'Dep':Dep,'Is stop':IsStop,
-                    'Is Punct':IsPunct})
-        return verbs,nouns,punct,stpwrd,oov,wrd,adj,len(list(self.__std_doc.sents))
+  
 
     def __frequent_matched_unmatched(self):
         gld_frq=self.__get_frequent_words(self.__gld_doc)
