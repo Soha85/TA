@@ -1,5 +1,4 @@
 import language_check
-#import language_tool_python
 from nltk.stem import PorterStemmer
 from itertools import groupby
 import spacy
@@ -13,24 +12,28 @@ from lexical_diversity import lex_div as ld
 import string
 nlp=spacy.load("en_core_web_md")
 stopwrds=set(stopwords.words('english'))
-#LT_tool=language_tool_python.LanguageTool('en-us')
 gr_tool=language_check.LanguageTool('en-us')
+cosine_value=0.5
+
 class KEM():
     def __init__(self,std_txt=None,gld_lst=None):
         
         if (std_txt!=None):
              #apply nlp spacy on student text
-             self.__std_txt=std_txt
-             self.__std_txt=self.__std_txt.replace("\n"," ")
+             self.__std_txt=std_txt.strip()
+             self.__std_txt=self.__std_txt.replace("\n"," ").strip()
              self.__std_doc=nlp(self.__std_txt, disable=['textcat','merge_entities','merge_subtokens','merge_noun_chunks'])
         if(gld_lst!=None):
             self.__gld_lst=gld_lst
             
+            
+            
+            
     def ExtractVA(self):
         try:
-            std_key=self.__get__keywords(self.__std_doc)
+            #std_key=self.__get__keywords(self.__std_doc)  #std_key.get('keywords')
             return {'documents similarities':self.__doc_cosine_similarity(self.__std_doc,self.__gld_lst),
-                    'Keywords list':self.__Find_match_and_similarity(std_key.get('keywords'),self.__gld_lst),
+                    'Keywords list':self.__Find_match_and_similarity(self.__std_doc,self.__gld_lst),
                     'yule':self.__yule(self.__std_doc),
                     'Other Yules':self.__get_yules(self.__std_doc),
                     'lexical diversity':self.__lexical_diversity(self.__std_doc)}
@@ -46,7 +49,6 @@ class KEM():
                     'tag':self.__std_GetTagInfo(self.__std_doc),
                     'OOV':self.__std_GetOOVInfo(self.__std_doc),
                     'tenses':self.__std_GetVerbTenses(self.__std_doc),
-                    #'Verb dependencies':self.__std_GetDependencies(self.__std_doc),
                     'Active':self.__std_GetActiveVoices(self.__std_doc),
                     'Passive':self.__std_GetPassiveVoices(self.__std_doc),
                     'words':self.__std_GetWrdInfo(self.__std_doc),
@@ -57,7 +59,6 @@ class KEM():
                     'sent info':self.__std_GetwrdsSentInfo(self.__std_doc),
                     'sentences similarity':self.__std_coisne_similarity(self.__std_doc),
                     'grammar errors':self.__grammar_check(self.__std_doc),
- #                   'grammar errors LT':self.__grammar_check_LT(self.__std_doc),
                     'Keywords list':key_dic,
                     'yule':self.__yule(self.__std_doc),
                     'Other Yules':self.__get_yules(self.__std_doc),
@@ -67,12 +68,11 @@ class KEM():
     
     def Extract_and_match(self):
         try:
-            std_key=self.__get__keywords(self.__std_doc)
+            #std_key=self.__get__keywords(self.__std_doc)
             return json.dumps({'All Caps':self.__std_GetALLCAPS(self.__std_doc),
                     'tag':self.__std_GetTagInfo(self.__std_doc),
                     'OOV':self.__std_GetOOVInfo(self.__std_doc),
                     'tenses':self.__std_GetVerbTenses(self.__std_doc),
-                    #'Verb dependencies':self.__std_GetDependencies(self.__std_doc),
                     'Active':self.__std_GetActiveVoices(self.__std_doc),
                     'Passive':self.__std_GetPassiveVoices(self.__std_doc),
                     'words':self.__std_GetWrdInfo(self.__std_doc),
@@ -84,8 +84,7 @@ class KEM():
                     'sentences similarity':self.__std_coisne_similarity(self.__std_doc),
                     'documents similarities':self.__doc_cosine_similarity(self.__std_doc,self.__gld_lst),
                     'grammar errors':self.__grammar_check(self.__std_doc),
-#                    'grammar errors LT':self.__grammar_check_LT(self.__std_doc),
-                    'Keywords list':self.__Find_match_and_similarity(std_key.get('keywords'),self.__gld_lst),
+                    'Keywords list':self.__Find_match_and_similarity(self.__std_doc,self.__gld_lst),
                     'yule':self.__yule(self.__std_doc),
                     'Other Yules':self.__get_yules(self.__std_doc),
                     'lexical diversity':self.__lexical_diversity(self.__std_doc)})
@@ -130,7 +129,7 @@ class KEM():
         res=[]
         for gld in gld_lst:
             gld_txt=' '.join(gld)
-            res.append(sampledoc.similarity(nlp(gld_txt, disable=['textcat','merge_entities','merge_subtokens','merge_noun_chunks'])))
+            res.append(sampledoc.similarity(nlp(gld_txt)))
         return res
     
     def __std_coisne_similarity(self,sampledoc):
@@ -139,7 +138,7 @@ class KEM():
         
         for sent in sampledoc.sents:
             txt=' '.join([re.sub(r'['+string.punctuation+']+', '', w.lower()) for w in sent.text.split(' ') if (re.sub(r'['+string.punctuation+']+', '', w.lower()) not in  stopwrds) and (w not in string.punctuation)])
-            txt=nlp(txt, disable=['textcat','merge_entities','merge_subtokens','merge_noun_chunks'])
+            txt=nlp(txt)
             if prevsent!="":
                 val=prevsent.similarity(txt)
                 results.append(val)
@@ -224,61 +223,74 @@ class KEM():
         for tkn1 in unmatched_lst:
             for tkn2 in gld_lst:
                 num=nlp.vocab[tkn1].similarity(nlp.vocab[tkn2])
-                if(num>0.6):
+                if(num>cosine_value):
                     sim.append(tkn2)
                             
         return sim
     
     #define the match function between the two lists
-    def __matching_keywords(self,stdlst,gldlst):
+    def __matching_keywords(self,sample_doc,gldlst):
             #matched list
             res=[]
             #unmatched list
             tmpres=[]
-            for x in stdlst:
-                if x.lower() in gldlst:
-                    res.append(x.lower())
-                else:
-                    tmpres.append(x.lower())
+            for token in sample_doc:
+                
+                if (not (token.text.lower() in stopwrds) and not (token.is_punct)):
+                    if (token.is_alpha or token.ent_type_ in  ('MONEY','TIME','DATE','CARDINAL') or token.pos_ in ('NUM')):
+                      
+                        if token.text.lower() in gldlst:
+                            res.append(token.text.lower())
+                        else:
+                            tmpres.append(token.text.lower())
+            res=list(set(res))
+            tmpres=list(set(tmpres))
             return res,tmpres
 
     def __get__keywords(self, sample_doc):
-        #define a function to get the frequent words in a text which aren't stop words or punctuations
-        words = [token.lemma_.strip().lower() if token.lemma_ != '-PRON-' else token.lower_ for token in sample_doc if token.lemma_.strip().lower() and not (token.lemma_.lower() in stopwrds) and not token.is_punct and token.is_alpha]
-        word_coun = Counter(words)
-        wrd_frq=[wrd for wrd in word_coun]
-        
-        #extract unique words with only 1 occurrence
-        uniq_wrds=[word for word in word_coun if (word_coun.get(word)==1)]
+        #define a function to get the frequent words in a text which aren't stop words or punctuations and not empty
+        #words alpha or numbers
+        #pronouns text
+       
+        words=[]
+        for token in sample_doc:
+            if (not (token.text.lower() in stopwrds) and not (token.is_punct) and token.text.lower().strip()!="" ):
+                if (token.is_alpha or token.ent_type_ in  ('MONEY','TIME','DATE','CARDINAL') or token.pos_ in ('NUM')) :
+                    if token.lemma_ != '-PRON-':
+                        words.extend([token.lemma_.lower()])
+                    else:
+                        words.extend([token.text.lower()])
         
         #extract nouns chuncks and special tags like proper noun, noun, adjective
         res=[]
         for chk in sample_doc.noun_chunks:
             tmp=""
             for tkn in chk:
-                if (tkn.pos_ in ['NOUN','PROPN','ADJ'] and tkn.lemma_.strip().lower() ):
-                    if (not(tkn.is_stop) and not(tkn.is_punct) and tkn.is_alpha):
+                if (tkn.pos_ in ['NOUN','PROPN','ADJ'] and tkn.lemma_.lower().strip()!="" ):
+                    if (not (tkn.lemma_.lower() in stopwrds) and not (tkn.is_punct)):
                         if tkn.lemma_ !='-PRON-':
-                            tmp = tmp + tkn.lemma_.strip().lower() + " "
+                            tmp = tmp + tkn.lemma_.lower() + " "
                         else:
-                            tmp = tmp + tkn.lower_ + " "
+                            tmp = tmp + tkn.text.lower() + " "
             if(tmp.strip()!=""):
                 res.append(tmp.strip())
         pos_lst= list(dict.fromkeys(res))
+
+        #union noun phrases and words extracted
+        key = list (set(words).union(set(pos_lst)))
         
-        key=self.__sumup_Match_Similarity([wrd_frq,uniq_wrds,pos_lst])
         return {'keywords': key, 'Count': len(key)}
 
-    def __Find_match_and_similarity(self,std_key,gld_lst):
+    def __Find_match_and_similarity(self,std_doc,gld_lst):
         res=[]
         #apply match function
         for gld in gld_lst:
-            matched,unmatched=self.__matching_keywords(std_key,gld)
+            
+            matched,unmatched=self.__matching_keywords(std_doc,gld)
             similar=self.__most_similar(unmatched,gld)
             tmp=self.__sumup_Match_Similarity([matched,similar])
             res.append({'keywords': tmp,'Count':len(tmp),'Exact keywords':matched,'Count-E':len(matched),'Count-G':len(gld)})
         return res
-
     
     
     def __yule(self,sample_doc):
